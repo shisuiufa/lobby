@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@import "./fonts.css";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --font-manrope: "Manrope", sans-serif;
+  --animate-pulse: pulse 1.5s ease-in-out infinite;
+  --animate-card-pop: card-pop 0.5s ease-out;
+
+  --color-primary-50: #f5f1fc;
+  --color-primary-100: #eae1f9;
+  --color-primary-200: #d2bff2;
+  --color-primary-300: #b99dea;
+  --color-primary-400: #9868e0;
+  --color-primary-500: #6b38d4;
+  --color-primary-600: #5c2ec0;
+  --color-primary-700: #4b26a0;
+  --color-primary-800: #3b1e80;
+  --color-primary-900: #2e1866;
+  --color-primary-950: #1c0f40;
+  --color-primary: var(--color-primary-500);
+
+  --color-ink-50: #f2f3f3;
+  --color-ink-100: #e4e5e6;
+  --color-ink-200: #c7c9cb;
+  --color-ink-300: #a6a9ac;
+  --color-ink-400: #7c8083;
+  --color-ink-500: #191c1e;
+  --color-ink-600: #16181a;
+  --color-ink-700: #121415;
+  --color-ink-800: #0d0e0f;
+  --color-ink-900: #08090a;
+  --color-ink-950: #030304;
+  --color-ink: var(--color-ink-500);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.05);
+    opacity: 0.7;
+  }
+}
+
+@keyframes card-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.8);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.05);
+  }
+
+  80% {
+    transform: translateY(5px) scale(0.98);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
