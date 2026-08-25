@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
-import type { JwtPayload, AuthenticatedRequest } from './types';
+import type { AuthenticatedRequest } from './interfaces/auth-request.interface';
+import type { JwtPayload } from './interfaces/jwt-payload.interface';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
 
