@@ -5,12 +5,12 @@ import { AuthService } from './auth.service';
 import { UsersModule } from '@/users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { SessionsService } from '@/sessions/sessions.service';
+import { SessionsModule } from '@/sessions/sessions.module';
 
 @Module({
   imports: [
     UsersModule,
-    SessionsService,
+    SessionsModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: {
