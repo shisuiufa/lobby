@@ -27,5 +27,6 @@ model InboxEvent {
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
   @@index([status, nextAttemptAt, createdAt])
+  @@index([status, updatedAt])
   @@map("inbox_events")
 }

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { InboxEvent, InboxStatus } from '@/prisma/generated/prisma/client';
 import { InboxEventInput } from './inbox.type';
-import { INBOX_BATCH_SIZE } from './inbox.constant';
+import { INBOX_BATCH_SIZE, INBOX_RECOVERY_BATCH_SIZE } from './inbox.constant';
 
 @Injectable()
 export class InboxRepository {
@@ -77,6 +77,42 @@ export class InboxRepository {
     return this.prisma.inboxEvent.update({
       where: {
         id,
+      },
+      data: {
+        status: InboxStatus.FAILED,
+        nextAttemptAt: null,
+      },
+    });
+  }
+
+  findStaleProcessingIds(staleBefore: Date): Promise<{ id: number }[]> {
+    return this.prisma.inboxEvent.findMany({
+      where: {
+        status: InboxStatus.PROCESSING,
+        updatedAt: {
+          lte: staleBefore,
+        },
+      },
+      select: {
+        id: true,
+      },
+      orderBy: {
+        updatedAt: 'asc',
+      },
+      take: INBOX_RECOVERY_BATCH_SIZE,
+    });
+  }
+
+  async markStaleFailed(staleBefore: Date, ids: number[] = []): Promise<void> {
+    await this.prisma.inboxEvent.updateMany({
+      where: {
+        id: {
+          in: ids,
+        },
+        status: InboxStatus.PROCESSING,
+        updatedAt: {
+          lte: staleBefore,
+        },
       },
       data: {
         status: InboxStatus.FAILED,

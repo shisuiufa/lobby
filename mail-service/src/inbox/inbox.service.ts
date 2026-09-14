@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import type { InboxEvent } from '@/prisma/generated/prisma/client';
 import { InboxRepository } from './inbox.repository';
-import { INBOX_MAX_RETRIES, INBOX_RETRY_DELAY_MS } from './inbox.constant';
+import {
+  INBOX_MAX_RETRIES,
+  INBOX_PROCESSING_TIMEOUT_MS,
+  INBOX_RETRY_DELAY_MS,
+} from './inbox.constant';
 import type { InboxEventInput } from './inbox.type';
 
 @Injectable()
@@ -29,6 +33,18 @@ export class InboxService {
     await this.inboxRepository.scheduleRetry(
       event.id,
       new Date(Date.now() + INBOX_RETRY_DELAY_MS),
+    );
+  }
+
+  async recoverStaleProcessing(): Promise<void> {
+    const staleBefore = new Date(Date.now() - INBOX_PROCESSING_TIMEOUT_MS);
+
+    const events =
+      await this.inboxRepository.findStaleProcessingIds(staleBefore);
+
+    await this.inboxRepository.markStaleFailed(
+      staleBefore,
+      events.map((event) => event.id),
     );
   }
 }

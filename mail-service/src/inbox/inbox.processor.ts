@@ -33,4 +33,11 @@ export class InboxProcessor {
       }
     }
   }
+
+  @Cron(CronExpression.EVERY_MINUTE, {
+    waitForCompletion: true,
+  })
+  async recoverStaleProcessing(): Promise<void> {
+    await this.inboxService.recoverStaleProcessing();
+  }
 }
