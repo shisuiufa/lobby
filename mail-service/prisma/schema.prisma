@@ -1,0 +1,31 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/prisma/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum InboxStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model InboxEvent {
+  id            Int         @id @default(autoincrement())
+  idempotencyId String      @unique @map("idempotency_id")
+  routingKey    String      @map("routing_key")
+  payload       Json
+  retries       Int         @default(0)
+  nextAttemptAt DateTime?   @map("next_attempt_at")
+  status        InboxStatus @default(RECEIVED)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@index([status, nextAttemptAt, createdAt])
+  @@map("inbox_events")
+}

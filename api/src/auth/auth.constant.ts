@@ -1,0 +1,3 @@
+export const AUTH_ACCESS_TOKEN_TTL = '15m';
+export const EMAIL_VERIFICATION_TOKEN_TTL_MS = 30 * 60 * 1000;
+export const PASSWORD_HASH_SALT_ROUNDS = 10;

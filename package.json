@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "packageManager": "yarn@4.10.0",
+  "workspaces": [
+    "api",
+    "web",
+    "mail-service",
+    "packages/*"
+  ]
+}
