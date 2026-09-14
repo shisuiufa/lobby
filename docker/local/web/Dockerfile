@@ -2,12 +2,6 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+RUN corepack enable
 
-RUN npm ci
-
-COPY . .
-
-EXPOSE 5173
-
-CMD ["npm", "run", "dev"]
+CMD ["yarn", "workspace", "web", "dev", "--host", "0.0.0.0"]

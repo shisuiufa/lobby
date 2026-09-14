@@ -9,10 +9,29 @@ services:
       POSTGRES_PASSWORD: lobby
       POSTGRES_DB: lobby
       TZ: UTC
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  postgres_mail:
+    image: postgres:17-alpine
+    container_name: postgres_mail
+    environment:
+      POSTGRES_USER: lobby
+      POSTGRES_PASSWORD: lobby
+      POSTGRES_DB: lobby_mail
+      TZ: UTC
+    volumes:
+      - postgres-mail-data:/var/lib/postgresql/data
+    ports:
+      - '5433:5432'
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
       interval: 5s
@@ -20,32 +39,97 @@ services:
       retries: 5
     restart: unless-stopped
   
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: lobby
+      RABBITMQ_DEFAULT_PASS: lobby
+      TZ: UTC
+    ports:
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  install:
+    image: node:24-alpine
+    working_dir: /app
+    volumes:
+      - ../..:/app
+      - root-node-modules:/app/node_modules
+    command: sh -c "corepack enable && yarn install"
+  
   api:
     build:
-      context: ../../api
-      dockerfile: ../docker/local/api/Dockerfile
+      context: ../..
+      dockerfile: docker/local/api/Dockerfile
     container_name: api
     volumes:
-      - ../../api:/app
-      - api-node-modules:/app/node_modules
+      - ../..:/app
+      - root-node-modules:/app/node_modules
     environment:
       TZ: UTC
     env_file:
       - ../../api/.env
     depends_on:
+      install:
+        condition: service_completed_successfully
       postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  mail:
+    build:
+      context: ../..
+      dockerfile: docker/local/mail/Dockerfile
+    container_name: mail
+    volumes:
+      - ../..:/app
+      - root-node-modules:/app/node_modules
+    environment:
+      TZ: UTC
+    env_file:
+      - ../../mail-service/.env
+    depends_on:
+      install:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      postgres_mail:
         condition: service_healthy
 
   web:
     build:
-      context: ../../web
-      dockerfile: ../docker/local/web/Dockerfile
+      context: ../..
+      dockerfile: docker/local/web/Dockerfile
     container_name: web
     volumes:
-      - ../../web:/app
-      - web-node-modules:/app/node_modules
+      - ../..:/app
+      - root-node-modules:/app/node_modules
     environment:
       TZ: UTC
+    depends_on:
+      install:
+        condition: service_completed_successfully
 
   nginx:
     image: nginx:alpine
@@ -59,6 +143,8 @@ services:
       - web
 
 volumes:
-  api-node-modules:
-  web-node-modules:
+  root-node-modules:
   postgres-data:
+  postgres-mail-data:
+  rabbitmq-data:
+  redis-data:

@@ -1,35 +1,53 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import type { Prisma, User } from '@/prisma/generated/prisma/client';
+import { CreateUserInput } from '@/users/user.type';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(createUserDto: CreateUserDto) {
-    return this.prisma.user.create({
-      data: createUserDto,
+  create(
+    createUserInput: CreateUserInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<User> {
+    const db = tx ?? this.prisma;
+
+    return db.user.create({
+      data: createUserInput,
     });
   }
 
-  findByEmail(email: string) {
+  findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
     });
   }
 
-  findByUsername(username: string) {
+  findByUsername(username: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { username },
     });
   }
 
-  findByEmailWithPassword(email: string) {
+  findByEmailWithPassword(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
       omit: {
         passwordHash: false,
       },
+    });
+  }
+
+  markEmailVerified(
+    userId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<User> {
+    const db = tx ?? this.prisma;
+
+    return db.user.update({
+      where: { id: userId },
+      data: { emailVerifiedAt: new Date() },
     });
   }
 }

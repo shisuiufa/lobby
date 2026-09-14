@@ -1,30 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { CreateSessionDto } from '@/sessions/dto/create-session.dto';
+import type { Session } from '@/prisma/generated/prisma/client';
+import { CreateSessionInput } from '@/sessions/session.type';
 
 @Injectable()
 export class SessionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(createSessionDto: CreateSessionDto) {
+  create(createSessionInput: CreateSessionInput): Promise<Session> {
     return this.prisma.session.create({
-      data: createSessionDto,
+      data: createSessionInput,
     });
   }
 
-  findById(id: string) {
+  findById(id: string): Promise<Session | null> {
     return this.prisma.session.findUnique({
       where: { id },
     });
   }
 
-  findByHash(hash: string) {
+  findByHash(hash: string): Promise<Session | null> {
     return this.prisma.session.findUnique({
       where: { refreshTokenHash: hash },
     });
   }
 
-  revokeById(id: string) {
+  revokeById(id: string): Promise<Session> {
     return this.prisma.session.update({
       where: { id },
       data: {
@@ -33,7 +34,7 @@ export class SessionsService {
     });
   }
 
-  updateHashById(id: string, hash: string) {
+  updateHashById(id: string, hash: string): Promise<Session> {
     return this.prisma.session.update({
       where: { id },
       data: { refreshTokenHash: hash },

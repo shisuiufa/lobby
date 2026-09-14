@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider     = "prisma-client"
   output       = "../src/prisma/generated/prisma"
@@ -13,28 +8,71 @@ datasource db {
   provider = "postgresql"
 }
 
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  username     String    @unique
-  displayName  String
-  passwordHash String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sessions     Session[]
+  id                String             @id @default(uuid())
+  email             String             @unique
+  username          String             @unique
+  displayName       String             @map("display_name")
+  passwordHash      String             @map("password_hash")
+  emailVerifiedAt   DateTime?          @map("email_verified_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  sessions          Session[]
+  emailVerification EmailVerification?
+
+  @@map("users")
 }
 
 model Session {
   id String @id @default(uuid())
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  refreshTokenHash String    @unique
-  revokedAt        DateTime?
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  revokedAt        DateTime? @map("revoked_at")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([userId])
+  @@map("sessions")
+}
+
+model OutboxEvent {
+  id Int @id @default(autoincrement())
+
+  exchangeName String @map("exchange_name")
+  routingKey   String @map("routing_key")
+  payload      Json
+
+  status        OutboxStatus @default(PENDING)
+  retries       Int          @default(0)
+  nextAttemptAt DateTime?    @map("next_attempt_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status, nextAttemptAt, createdAt])
+  @@map("outbox_events")
+}
+
+model EmailVerification {
+  id Int @id @default(autoincrement())
+
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("email_verifications")
 }
