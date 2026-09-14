@@ -1,3 +1,6 @@
-export const OUTBOX_BATCH_SIZE = 50;
+export const OUTBOX_BATCH_SIZE = 100;
 export const OUTBOX_RETRY_DELAY_MS = 60_000;
 export const OUTBOX_MAX_RETRIES = 5;
+
+export const OUTBOX_RECOVERY_BATCH_SIZE = 100;
+export const OUTBOX_PROCESSING_TIMEOUT_MS = 10 * 60_000;

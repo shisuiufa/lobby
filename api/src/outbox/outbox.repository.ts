@@ -5,7 +5,10 @@ import {
   OutboxStatus,
   Prisma,
 } from '@/prisma/generated/prisma/client';
-import { OUTBOX_BATCH_SIZE } from './outbox.constant';
+import {
+  OUTBOX_BATCH_SIZE,
+  OUTBOX_RECOVERY_BATCH_SIZE,
+} from './outbox.constant';
 import { AppEvent } from '@/event/event.type';
 
 @Injectable()
@@ -77,6 +80,74 @@ export class OutboxRepository {
   markFailed(id: number): Promise<OutboxEvent> {
     return this.prisma.outboxEvent.update({
       where: { id },
+      data: {
+        status: OutboxStatus.FAILED,
+        nextAttemptAt: null,
+      },
+    });
+  }
+
+  findStaleProcessing(
+    staleBefore: Date,
+  ): Promise<Pick<OutboxEvent, 'id' | 'retries'>[]> {
+    return this.prisma.outboxEvent.findMany({
+      where: {
+        status: OutboxStatus.PROCESSING,
+        updatedAt: {
+          lte: staleBefore,
+        },
+      },
+      select: {
+        id: true,
+        retries: true,
+      },
+      orderBy: {
+        updatedAt: 'asc',
+      },
+      take: OUTBOX_RECOVERY_BATCH_SIZE,
+    });
+  }
+
+  async requeueStale(
+    staleBefore: Date,
+    ids: number[],
+    nextAttemptAt: Date,
+  ): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+
+    await this.prisma.outboxEvent.updateMany({
+      where: {
+        id: {
+          in: ids,
+        },
+        status: OutboxStatus.PROCESSING,
+        updatedAt: {
+          lte: staleBefore,
+        },
+      },
+      data: {
+        status: OutboxStatus.PENDING,
+        retries: {
+          increment: 1,
+        },
+        nextAttemptAt,
+      },
+    });
+  }
+
+  async markStaleFailed(staleBefore: Date, ids: number[] = []): Promise<void> {
+    await this.prisma.outboxEvent.updateMany({
+      where: {
+        id: {
+          in: ids,
+        },
+        status: OutboxStatus.PROCESSING,
+        updatedAt: {
+          lte: staleBefore,
+        },
+      },
       data: {
         status: OutboxStatus.FAILED,
         nextAttemptAt: null,

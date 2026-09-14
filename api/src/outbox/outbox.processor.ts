@@ -37,4 +37,11 @@ export class OutboxProcessor {
       }
     }
   }
+
+  @Cron(CronExpression.EVERY_MINUTE, {
+    waitForCompletion: true,
+  })
+  async recoverStaleProcessing(): Promise<void> {
+    await this.outboxService.recoverStaleProcessing();
+  }
 }

@@ -4,6 +4,7 @@ import type { AppEvent } from '@/event/event.type';
 import { OutboxRepository } from './outbox.repository';
 import {
   OUTBOX_MAX_RETRIES,
+  OUTBOX_PROCESSING_TIMEOUT_MS,
   OUTBOX_RETRY_DELAY_MS,
 } from '@/outbox/outbox.constant';
 
@@ -33,5 +34,30 @@ export class OutboxService {
       event.id,
       new Date(Date.now() + OUTBOX_RETRY_DELAY_MS),
     );
+  }
+
+  async recoverStaleProcessing(): Promise<void> {
+    const staleBefore = new Date(Date.now() - OUTBOX_PROCESSING_TIMEOUT_MS);
+
+    const events = await this.outboxRepository.findStaleProcessing(staleBefore);
+
+    const retryIds: number[] = [];
+    const failedIds: number[] = [];
+
+    for (const event of events) {
+      if (event.retries >= OUTBOX_MAX_RETRIES) {
+        failedIds.push(event.id);
+      } else {
+        retryIds.push(event.id);
+      }
+    }
+
+    await this.outboxRepository.requeueStale(
+      staleBefore,
+      retryIds,
+      new Date(Date.now() + OUTBOX_RETRY_DELAY_MS),
+    );
+
+    await this.outboxRepository.markStaleFailed(staleBefore, failedIds);
   }
 }
