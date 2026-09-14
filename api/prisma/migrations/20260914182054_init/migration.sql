@@ -69,6 +69,9 @@ CREATE INDEX "sessions_user_id_idx" ON "sessions"("user_id");
 CREATE INDEX "outbox_events_status_next_attempt_at_created_at_idx" ON "outbox_events"("status", "next_attempt_at", "created_at");
 
 -- CreateIndex
+CREATE INDEX "outbox_events_status_updated_at_idx" ON "outbox_events"("status", "updated_at");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "email_verifications_user_id_key" ON "email_verifications"("user_id");
 
 -- CreateIndex
