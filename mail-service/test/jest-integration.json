@@ -1,0 +1,16 @@
+{
+  "rootDir": "../",
+  "testMatch": ["<rootDir>/src/**/*.integration-spec.ts"],
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "^(\\.{1,2}/.*)\\.js$": "$1"
+  },
+  "modulePaths": ["<rootDir>"],
+  "testEnvironment": "node",
+  "testTimeout": 120000,
+  "maxWorkers": 1
+}
