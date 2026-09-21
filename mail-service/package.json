@@ -18,6 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:integration": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config ./test/jest-integration.json --runInBand",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy"
@@ -29,6 +30,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/microservices": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/schedule": "^12.0.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "amqp-connection-manager": "^5.0.0",
@@ -44,6 +46,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@testcontainers/postgresql": "^12.1.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
@@ -76,6 +79,13 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1",
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!@nestjs/config/)"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
