@@ -21,6 +21,7 @@ import { VerifyDto } from './dto/verify.dto';
 import { UserEntity } from '@/users/user.entity';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { EXCHANGE, ROUTING_KEY } from '@lobby/events';
+import { ResendVerificationDto } from '@/auth/dto/resend-verification.dto';
 
 @Injectable()
 export class AuthService {
@@ -52,11 +53,7 @@ export class AuthService {
       PASSWORD_HASH_SALT_ROUNDS,
     );
 
-    const verificationToken = CryptoUtil.generateToken();
-    const verificationTokenHash = CryptoUtil.hashToken(verificationToken);
-    const verificationExpiresAt = new Date(
-      Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS,
-    );
+    const { token, tokenHash, expiresAt } = this.createEmailVerificationToken();
 
     await this.prisma.$transaction(async (tx) => {
       const user = await this.usersService.create(
@@ -72,8 +69,8 @@ export class AuthService {
       await this.emailVerificationService.create(
         {
           userId: user.id,
-          tokenHash: verificationTokenHash,
-          expiresAt: verificationExpiresAt,
+          tokenHash,
+          expiresAt,
         },
         tx,
       );
@@ -84,7 +81,7 @@ export class AuthService {
           routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
           payload: {
             email: registerDto.email,
-            token: verificationToken,
+            token: token,
           },
         },
         tx,
@@ -151,5 +148,70 @@ export class AuthService {
       await this.usersService.markEmailVerified(verification.userId, tx);
       await this.emailVerificationService.delete(verification.id, tx);
     });
+  }
+
+  async resendVerificationEmail(dto: ResendVerificationDto): Promise<void> {
+    const user = await this.usersService.findByEmail(dto.email);
+
+    if (!user) {
+      return;
+    }
+
+    if (user.emailVerifiedAt) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    const verification = await this.emailVerificationService.findByUserId(
+      user.id,
+    );
+
+    if (verification && verification.expiresAt > new Date()) {
+      throw new BadRequestException(
+        'The current verification link has not expired yet',
+      );
+    }
+
+    const { token, tokenHash, expiresAt } = this.createEmailVerificationToken();
+
+    await this.prisma.$transaction(async (tx) => {
+      if (verification) {
+        await this.emailVerificationService.delete(verification.id, tx);
+      }
+
+      await this.emailVerificationService.create(
+        {
+          userId: user.id,
+          tokenHash,
+          expiresAt,
+        },
+        tx,
+      );
+
+      await this.outboxService.create(
+        {
+          exchangeName: EXCHANGE.AUTH,
+          routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
+          payload: {
+            email: user.email,
+            token,
+          },
+        },
+        tx,
+      );
+    });
+  }
+
+  private createEmailVerificationToken(): {
+    token: string;
+    tokenHash: string;
+    expiresAt: Date;
+  } {
+    const token = CryptoUtil.generateToken();
+
+    return {
+      token,
+      tokenHash: CryptoUtil.hashToken(token),
+      expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS),
+    };
   }
 }

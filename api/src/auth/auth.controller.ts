@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { VerifyDto } from '@/auth/dto/verify.dto';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
+import { ResendVerificationDto } from '@/auth/dto/resend-verification.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -28,5 +29,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Body() verifyDto: VerifyDto): Promise<void> {
     return await this.authService.verifyEmail(verifyDto);
+  }
+
+  @Public()
+  @Post('email/resend')
+  @HttpCode(HttpStatus.OK)
+  async resendVerificationEmail(
+    @Body() dto: ResendVerificationDto,
+  ): Promise<void> {
+    return await this.authService.resendVerificationEmail(dto);
   }
 }

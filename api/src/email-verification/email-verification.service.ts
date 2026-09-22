@@ -18,6 +18,12 @@ export class EmailVerificationService {
     });
   }
 
+  findByUserId(id: string): Promise<EmailVerification | null> {
+    return this.prisma.emailVerification.findUnique({
+      where: { userId: id },
+    });
+  }
+
   findByTokenHash(tokenHash: string): Promise<EmailVerification | null> {
     return this.prisma.emailVerification.findUnique({
       where: { tokenHash },
