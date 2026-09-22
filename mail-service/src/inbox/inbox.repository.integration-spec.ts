@@ -162,4 +162,178 @@ describe('InboxRepository (integration)', () => {
       await competing.prisma.$disconnect();
     }
   });
+
+  it('marks an inbox event as processed and clears retry time', async () => {
+    const event = await prisma.inboxEvent.create({
+      data: {
+        idempotencyId: 'message-1',
+        routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
+        payload: {
+          email: 'user@example.com',
+          token: 'token',
+        },
+        status: InboxStatus.PROCESSING,
+        retries: 2,
+        nextAttemptAt: new Date('2026-09-15T00:00:00.000Z'),
+      },
+    });
+
+    await repository.markProcessed(event.id);
+
+    const processedEvent = await prisma.inboxEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+
+    expect(processedEvent).toMatchObject({
+      id: event.id,
+      status: InboxStatus.PROCESSED,
+      retries: 2,
+      nextAttemptAt: null,
+    });
+  });
+
+  it('schedules an inbox event for retry', async () => {
+    const nextAttemptAt = new Date('2026-09-15T00:00:00.000Z');
+
+    const event = await prisma.inboxEvent.create({
+      data: {
+        idempotencyId: 'message-1',
+        routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
+        payload: {
+          email: 'user@example.com',
+          token: 'token',
+        },
+        status: InboxStatus.RECEIVED,
+        retries: 0,
+        nextAttemptAt: null,
+      },
+    });
+
+    await repository.scheduleRetry(event.id, nextAttemptAt);
+
+    const retryEvent = await prisma.inboxEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+
+    expect(retryEvent).toMatchObject({
+      id: event.id,
+      status: InboxStatus.RECEIVED,
+      retries: 1,
+      nextAttemptAt,
+    });
+  });
+
+  it('marks an inbox event as failed and clears retry time', async () => {
+    const nextAttemptAt = new Date('2026-09-15T00:00:00.000Z');
+
+    const event = await prisma.inboxEvent.create({
+      data: {
+        idempotencyId: 'message-1',
+        routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
+        payload: {
+          email: 'user@example.com',
+          token: 'token',
+        },
+        status: InboxStatus.PROCESSING,
+        nextAttemptAt: nextAttemptAt,
+      },
+    });
+
+    await repository.markFailed(event.id);
+
+    const failedEvent = await prisma.inboxEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+
+    expect(failedEvent).toMatchObject({
+      id: event.id,
+      status: InboxStatus.FAILED,
+      nextAttemptAt: null,
+    });
+  });
+
+  it('finds stale processing event ids in update order', async () => {
+    const staleBefore = new Date('2026-09-15T00:10:00.000Z');
+
+    const oldest = await prisma.inboxEvent.create({
+      data: {
+        idempotencyId: 'message-1',
+        routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
+        payload: {},
+        status: InboxStatus.PROCESSING,
+        updatedAt: new Date('2026-09-15T00:01:00.000Z'),
+      },
+    });
+
+    const newestStale = await prisma.inboxEvent.create({
+      data: {
+        idempotencyId: 'message-2',
+        routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
+        payload: {},
+        status: InboxStatus.PROCESSING,
+        updatedAt: new Date('2026-09-15T00:09:00.000Z'),
+      },
+    });
+
+    await prisma.inboxEvent.create({
+      data: {
+        idempotencyId: 'message-3',
+        routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
+        payload: {},
+        status: InboxStatus.PROCESSING,
+        updatedAt: new Date('2026-09-15T00:11:00.000Z'),
+      },
+    });
+
+    const staleIds = await repository.findStaleProcessingIds(staleBefore);
+
+    expect(staleIds).toEqual([{ id: oldest.id }, { id: newestStale.id }]);
+  });
+
+  it('marks only matching stale processing events as failed', async () => {
+    const staleBefore = new Date('2026-09-15T00:10:00.000Z');
+
+    const staleEvent = await prisma.inboxEvent.create({
+      data: {
+        idempotencyId: 'message-1',
+        routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
+        payload: {},
+        status: InboxStatus.PROCESSING,
+        nextAttemptAt: new Date('2026-09-15T00:05:00.000Z'),
+        updatedAt: new Date('2026-09-15T00:01:00.000Z'),
+      },
+    });
+
+    const recentEvent = await prisma.inboxEvent.create({
+      data: {
+        idempotencyId: 'message-2',
+        routingKey: ROUTING_KEY.EMAIL_VERIFICATION,
+        payload: {},
+        status: InboxStatus.PROCESSING,
+        updatedAt: new Date('2026-09-15T00:11:00.000Z'),
+      },
+    });
+
+    await repository.markStaleFailed(staleBefore, [
+      staleEvent.id,
+      recentEvent.id,
+    ]);
+
+    const updatedStaleEvent = await prisma.inboxEvent.findUniqueOrThrow({
+      where: { id: staleEvent.id },
+    });
+
+    const unchangedRecentEvent = await prisma.inboxEvent.findUniqueOrThrow({
+      where: { id: recentEvent.id },
+    });
+
+    expect(updatedStaleEvent).toMatchObject({
+      status: InboxStatus.FAILED,
+      nextAttemptAt: null,
+    });
+
+    expect(unchangedRecentEvent).toMatchObject({
+      status: InboxStatus.PROCESSING,
+    });
+  });
 });
