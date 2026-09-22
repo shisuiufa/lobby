@@ -1,16 +1,16 @@
 {
+  "rootDir": "../",
+  "testMatch": ["<rootDir>/src/**/*.integration-spec.ts"],
   "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
-  "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "moduleNameMapper": {
-    "^@/(.*)$": "<rootDir>/../src/$1",
+    "^@/(.*)$": "<rootDir>/src/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   },
-  "modulePaths": ["<rootDir>/.."],
+  "modulePaths": ["<rootDir>"],
+  "testEnvironment": "node",
   "testTimeout": 120000,
   "maxWorkers": 1
 }

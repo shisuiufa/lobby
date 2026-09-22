@@ -18,7 +18,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand",
+    "test:integration": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config ./test/jest-integration.json --runInBand",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy"
@@ -56,6 +57,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.0.0",
+    "@testcontainers/postgresql": "^12.1.0",
     "dotenv": "^17.4.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
@@ -84,6 +86,13 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1",
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!@nestjs/config/)"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
