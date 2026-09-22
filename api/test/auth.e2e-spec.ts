@@ -7,10 +7,10 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { PrismaService } from '../src/prisma/prisma.service';
-import { RabbitMqPublisher } from '../src/rabbitmq/rabbitmq.publisher';
-import { OutboxStatus } from '../src/prisma/generated/prisma/enums';
+import { AppModule } from '@/app.module';
+import { PrismaService } from '@/prisma/prisma.service';
+import { RabbitMqPublisher } from '@/rabbitmq/rabbitmq.publisher';
+import { OutboxStatus } from '@/prisma/generated/prisma/enums';
 import { PostgresTestDatabase } from './support/postgres-test-database';
 import { ROUTING_KEY } from '@lobby/events';
 
