@@ -35,6 +35,8 @@ model User {
   emailVerification      EmailVerification?
   sentFriendRequests     FriendRequest[]    @relation("SentFriendRequests")
   receivedFriendRequests FriendRequest[]    @relation("ReceivedFriendRequests")
+  firstUserFriends       Friend[]           @relation("FirstUserFriends")
+  secondUserFriends      Friend[]           @relation("SecondUserFriends")
 
   @@map("users")
 }
@@ -105,4 +107,21 @@ model FriendRequest {
   @@index([senderId, status, createdAt])
   @@index([recipientId, status, createdAt])
   @@map("friend_requests")
+}
+
+model Friend {
+  id Int @id @default(autoincrement())
+
+  firstUserId String @map("first_user_id")
+  firstUser   User   @relation("FirstUserFriends", fields: [firstUserId], references: [id])
+
+  secondUserId String @map("second_user_id")
+  secondUser   User   @relation("SecondUserFriends", fields: [secondUserId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([firstUserId])
+  @@index([secondUserId])
+  @@map("friends")
 }
