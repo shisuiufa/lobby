@@ -1,6 +1,6 @@
 import { Exclude } from 'class-transformer';
 
-export class UserEntity {
+export class UsersEntity {
   id: string;
   email: string;
   username: string;
@@ -20,7 +20,7 @@ export class UserEntity {
   @Exclude()
   emailVerification: unknown;
 
-  constructor(partial: Partial<UserEntity>) {
+  constructor(partial: Partial<UsersEntity>) {
     Object.assign(this, partial);
   }
 }

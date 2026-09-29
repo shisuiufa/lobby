@@ -6,6 +6,7 @@ import { Public } from './decorators/public.decorator';
 import { VerifyDto } from '@/auth/dto/verify.dto';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
 import { ResendVerificationDto } from '@/auth/dto/resend-verification.dto';
+import { UsersEntity } from '@/users/users.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -15,28 +16,31 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
-    return await this.authService.login(loginDto);
+    const result = await this.authService.login(loginDto);
+
+    return new AuthResponseDto({
+      ...result,
+      user: new UsersEntity(result.user),
+    });
   }
 
   @Public()
   @Post('register')
-  async register(@Body() registerDto: RegisterDto): Promise<void> {
-    return await this.authService.register(registerDto);
+  register(@Body() registerDto: RegisterDto): Promise<void> {
+    return this.authService.register(registerDto);
   }
 
   @Public()
   @Post('email/verify')
   @HttpCode(HttpStatus.OK)
-  async verifyEmail(@Body() verifyDto: VerifyDto): Promise<void> {
-    return await this.authService.verifyEmail(verifyDto);
+  verifyEmail(@Body() verifyDto: VerifyDto): Promise<void> {
+    return this.authService.verifyEmail(verifyDto);
   }
 
   @Public()
   @Post('email/resend')
   @HttpCode(HttpStatus.OK)
-  async resendVerificationEmail(
-    @Body() dto: ResendVerificationDto,
-  ): Promise<void> {
-    return await this.authService.resendVerificationEmail(dto);
+  resendVerificationEmail(@Body() dto: ResendVerificationDto): Promise<void> {
+    return this.authService.resendVerificationEmail(dto);
   }
 }

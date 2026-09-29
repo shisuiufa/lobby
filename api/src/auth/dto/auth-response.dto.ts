@@ -1,11 +1,11 @@
-import { UserEntity } from '@/users/user.entity';
+import { UsersEntity } from '@/users/users.entity';
 
 export class AuthResponseDto {
-  user: UserEntity;
+  user: UsersEntity;
   accessToken: string;
   refreshToken: string;
 
-  constructor(partial: Partial<AuthResponseDto>) {
-    Object.assign(this, partial);
+  constructor(data: AuthResponseDto) {
+    Object.assign(this, data);
   }
 }

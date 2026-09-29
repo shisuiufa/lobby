@@ -4,7 +4,6 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '@/users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
@@ -18,15 +17,15 @@ import {
 } from './auth.constant';
 import { EmailVerificationService } from '@/email-verification/email-verification.service';
 import { VerifyDto } from './dto/verify.dto';
-import { UserEntity } from '@/users/user.entity';
-import { AuthResponseDto } from './dto/auth-response.dto';
 import { EXCHANGE, ROUTING_KEY } from '@lobby/events';
-import { ResendVerificationDto } from '@/auth/dto/resend-verification.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { UsersRepository } from '@/users/users.repository';
+import type { AuthResult, EmailVerificationToken } from './types/auth.type';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly usersService: UsersService,
+    private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
     private readonly sessionsService: SessionsService,
     private readonly prisma: PrismaService,
@@ -36,8 +35,8 @@ export class AuthService {
 
   async register(registerDto: RegisterDto): Promise<void> {
     const [existingEmail, existingUsername] = await Promise.all([
-      this.usersService.findByEmail(registerDto.email),
-      this.usersService.findByUsername(registerDto.username),
+      this.usersRepository.findByEmail(registerDto.email),
+      this.usersRepository.findByUsername(registerDto.username),
     ]);
 
     if (existingEmail) {
@@ -56,7 +55,7 @@ export class AuthService {
     const { token, tokenHash, expiresAt } = this.createEmailVerificationToken();
 
     await this.prisma.$transaction(async (tx) => {
-      const user = await this.usersService.create(
+      const user = await this.usersRepository.create(
         {
           email: registerDto.email,
           username: registerDto.username,
@@ -89,8 +88,8 @@ export class AuthService {
     });
   }
 
-  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
-    const user = await this.usersService.findByEmailWithPassword(
+  async login(loginDto: LoginDto): Promise<AuthResult> {
+    const user = await this.usersRepository.findByEmailWithPassword(
       loginDto.email,
     );
 
@@ -123,11 +122,11 @@ export class AuthService {
       refreshTokenHash,
     });
 
-    return new AuthResponseDto({
-      user: new UserEntity(user),
+    return {
+      user,
       accessToken,
       refreshToken,
-    });
+    };
   }
 
   async verifyEmail(verifyDto: VerifyDto): Promise<void> {
@@ -145,13 +144,13 @@ export class AuthService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await this.usersService.markEmailVerified(verification.userId, tx);
+      await this.usersRepository.markEmailVerified(verification.userId, tx);
       await this.emailVerificationService.delete(verification.id, tx);
     });
   }
 
   async resendVerificationEmail(dto: ResendVerificationDto): Promise<void> {
-    const user = await this.usersService.findByEmail(dto.email);
+    const user = await this.usersRepository.findByEmail(dto.email);
 
     if (!user) {
       return;
@@ -201,13 +200,8 @@ export class AuthService {
     });
   }
 
-  private createEmailVerificationToken(): {
-    token: string;
-    tokenHash: string;
-    expiresAt: Date;
-  } {
+  private createEmailVerificationToken(): EmailVerificationToken {
     const token = CryptoUtil.generateToken();
-
     return {
       token,
       tokenHash: CryptoUtil.hashToken(token),
